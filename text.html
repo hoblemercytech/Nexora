@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title></title>
+</head>
+
+<body>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+    <div style="background: linear-gradient(135deg, #10b981, #34d399); color: white; padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+      <h1 style="margin: 0; font-size: 28px;">✅ Payment Confirmed!</h1>
+      <p style="margin: 10px 0 0;">Thank you for choosing Nexora</p>
+    </div>
+    
+    <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+      <p>Dear <strong>${escapeHtml(name)}</strong>,</p>
+      <p>Your payment has been successfully confirmed. Your token is now active!</p>
+      
+      <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 25px 0;">
+        <h3 style="margin-top: 0;">Payment Details</h3>
+        <p><strong>Token:</strong> ${token}</p>
+        <p><strong>Amount:</strong> $${Number(usd).toFixed(2)} USD (${currency} ${Number(local).toFixed(2)})</p>
+        <p><strong>Payment ID:</strong> ${escapeHtml(pid)}</p>
+      </div>
+      
+      <p>You can now enjoy all the benefits of your token.</p>
+      <p style="margin-top: 30px;">Best regards,<br><strong>The Nexora Team</strong></p>
+    </div>
+    
+    <p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px;">
+      This is an automated email. Please do not reply.
+    </p>
+  </div>
+</body>
+
+</html>
