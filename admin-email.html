@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexora — Send Email</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:       #080812;
+  --bg2:      #0f0f1e;
+  --bg3:      #14142a;
+  --card:     #1a1a2e;
+  --card2:    #1e1e35;
+  --border:   #2a2a45;
+  --border2:  #353560;
+  --purple:   #7c3aed;
+  --purple-l: #9333ea;
+  --green:    #22c55e;
+  --blue:     #3a86ff;
+  --amber:    #f59e0b;
+  --red:      #ef4444;
+  --text:     #e2e8f0;
+  --text2:    #94a3b8;
+  --text3:    #64748b;
+  --t:        all .18s ease;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;}
+
+/* ── LAYOUT ── */
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;}
+.main-area{margin-left:220px;flex:1;padding:28px;}
+
+/* ── SIDEBAR ── */
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.sb-logo-mark{width:34px;height:34px;background:linear-gradient(135deg,var(--purple),var(--purple-l));border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:#fff;}
+.sb-logo-text{font-weight:800;font-size:17px;}
+.sb-logo-text span{color:var(--purple-l);}
+.sb-badge-admin{font-size:9px;background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;}
+.sb-nav{flex:1;padding:12px 10px;}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;border:none;background:none;color:var(--text2);cursor:pointer;font-size:13px;font-weight:500;transition:var(--t);width:100%;text-align:left;}
+.sb-item:hover{background:var(--bg3);color:var(--text);}
+.sb-item.active{background:rgba(124,58,237,.15);color:var(--purple-l);font-weight:700;}
+.sb-bottom{padding:14px 10px;border-top:1px solid var(--border);}
+
+/* ── PAGE HEADER ── */
+.page-header{display:flex;align-items:center;gap:14px;margin-bottom:24px;}
+.back-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--card);border:1px solid var(--border);border-radius:9px;color:var(--text2);cursor:pointer;font-size:12.5px;font-weight:600;transition:var(--t);text-decoration:none;}
+.back-btn:hover{border-color:var(--purple);color:var(--text);}
+.page-title{font-size:22px;font-weight:800;letter-spacing:-.4px;}
+.page-sub{font-size:13px;color:var(--text2);margin-top:2px;}
+
+/* ── GRID ── */
+.grid{display:grid;grid-template-columns:1fr 1.4fr;gap:20px;align-items:start;}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.card-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:14px;font-weight:700;}
+.card-sub{font-size:12px;color:var(--text2);margin-top:2px;}
+.card-body{padding:16px 18px;}
+
+/* ── RECIPIENT MODE TABS ── */
+.mode-tabs{display:flex;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:16px;gap:2px;}
+.mode-tab{flex:1;padding:8px;border-radius:8px;border:none;background:none;color:var(--text2);cursor:pointer;font-size:12.5px;font-weight:600;transition:var(--t);text-align:center;}
+.mode-tab.active{background:var(--purple);color:#fff;}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;margin-bottom:12px;}
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);}
+.search-inp{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:9px 12px 9px 34px;color:var(--text);font-size:13px;outline:none;transition:var(--t);}
+.search-inp:focus{border-color:var(--purple);}
+.search-inp::placeholder{color:var(--text3);}
+
+/* ── USER LIST ── */
+.user-list{max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+.user-list::-webkit-scrollbar{width:4px;}
+.user-list::-webkit-scrollbar-track{background:transparent;}
+.user-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+.user-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;cursor:pointer;transition:var(--t);border:1px solid transparent;}
+.user-row:hover{background:var(--bg3);}
+.user-row.selected{background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.3);}
+
+.user-av{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0;}
+.user-info{flex:1;min-width:0;}
+.user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-email{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-badge{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px;flex-shrink:0;}
+.user-badge.verified{background:rgba(34,197,94,.12);color:var(--green);}
+.user-badge.premium{background:rgba(124,58,237,.12);color:var(--purple-l);}
+.user-badge.unverified{background:rgba(100,116,139,.1);color:var(--text3);}
+
+.user-check{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:var(--t);}
+.user-row.selected .user-check{background:var(--purple);border-color:var(--purple);}
+
+/* select all bar */
+.select-all-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;background:var(--bg3);border-radius:9px;margin-bottom:8px;}
+.select-all-btn{background:none;border:none;color:var(--purple-l);font-size:12.5px;font-weight:700;cursor:pointer;}
+.selected-count{font-size:12px;color:var(--text2);}
+
+/* ── COMPOSE FORM ── */
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+.form-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13.5px;outline:none;transition:var(--t);font-family:inherit;}
+.form-input:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(124,58,237,.1);}
+.form-input::placeholder{color:var(--text3);}
+textarea.form-input{resize:vertical;min-height:140px;line-height:1.6;}
+
+/* recipient preview */
+.recipient-preview{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:10px 13px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.recipient-chip{display:flex;align-items:center;gap:5px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--purple-l);font-weight:600;}
+.recipient-chip button{background:none;border:none;color:var(--purple-l);cursor:pointer;font-size:14px;line-height:1;padding:0;margin-left:2px;}
+.recipient-chip.all{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.25);color:var(--green);}
+.no-recipients{font-size:12.5px;color:var(--text3);}
+
+/* cta row */
+.cta-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* send button */
+.send-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--purple),var(--purple-l));border:none;border-radius:11px;color:#fff;font-size:14.5px;font-weight:800;cursor:pointer;transition:var(--t);display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;}
+.send-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(124,58,237,.4);}
+.send-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+
+/* ── SENT LOG ── */
+.log-wrap{margin-top:20px;}
+.log-item{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
+.log-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.log-icon.ok{background:rgba(34,197,94,.12);color:var(--green);}
+.log-icon.err{background:rgba(239,68,68,.12);color:var(--red);}
+.log-name{font-size:13px;font-weight:600;}
+.log-email{font-size:11.5px;color:var(--text3);}
+.log-status{margin-left:auto;font-size:12px;font-weight:700;}
+.log-status.ok{color:var(--green);}
+.log-status.err{color:var(--red);}
+
+/* ── TOAST ── */
+.toast-stack{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--card2);border:1px solid var(--border2);border-radius:11px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;min-width:280px;max-width:360px;animation:tIn .2s ease;}
+@keyframes tIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:none;}}
+.toast.hide{animation:tOut .2s ease forwards;}
+@keyframes tOut{to{opacity:0;transform:translateX(20px);}}
+.t-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.t-icon.g{background:rgba(34,197,94,.15);color:var(--green);}
+.t-icon.r{background:rgba(239,68,68,.15);color:var(--red);}
+.t-icon.a{background:rgba(245,158,11,.15);color:var(--amber);}
+.t-title{font-size:13px;font-weight:700;}
+.t-body{font-size:12px;color:var(--text2);margin-top:2px;}
+
+/* spinner */
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* empty */
+.empty{text-align:center;padding:28px;color:var(--text3);font-size:13px;}
+.empty-icon{font-size:28px;margin-bottom:8px;}
+
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .main-area{margin-left:0;padding:16px;}
+  .grid{grid-template-columns:1fr;}
+  .cta-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-mark">N</div>
+      <div>
+        <div class="sb-logo-text">Nex<span>ora</span> <span class="sb-badge-admin">ADMIN</span></div>
+      </div>
+    </div>
+    <nav class="sb-nav">
+      <button class="sb-item" onclick="window.location.href='admin.html'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Overview
+      </button>
+      <button class="sb-item active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Send Email
+      </button>
+    </nav>
+    <div class="sb-bottom">
+      <button onclick="logout()" style="width:100%;background:none;border:1px solid var(--border);color:var(--text3);padding:8px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">Log Out</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-area">
+
+    <!-- Header -->
+    <div class="page-header">
+      <a href="admin.html" class="back-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </a>
+      <div>
+        <div class="page-title">✉️ Send Email</div>
+        <div class="page-sub">Send messages to individual users or broadcast to everyone</div>
+      </div>
+    </div>
+
+    <!-- Grid -->
+    <div class="grid">
+
+      <!-- LEFT: Recipients -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Select Recipients</div>
+              <div class="card-sub" id="recipient-sub">0 users loaded</div>
+            </div>
+          </div>
+          <div class="card-body">
+
+            <!-- Mode tabs -->
+            <div class="mode-tabs">
+              <button class="mode-tab active" id="tab-individual" onclick="setMode('individual')">
+                👤 Individual
+              </button>
+              <button class="mode-tab" id="tab-all" onclick="setMode('all')">
+                👥 All Users
+              </button>
+              <button class="mode-tab" id="tab-verified" onclick="setMode('verified')">
+                ✓ Verified Only
+              </button>
+            </div>
+
+            <!-- All users mode notice -->
+            <div id="all-mode-notice" style="display:none;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:11px 13px;margin-bottom:12px;font-size:12.5px;color:var(--green);">
+              📢 Email will be sent to <strong id="all-mode-count">all</strong> users
+            </div>
+
+            <div id="verified-mode-notice" style="display:none;background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);border-radius:9px;padding:11px 13px;margin-bottom:12px;font-size:12.5px;color:var(--purple-l);">
+              ✓ Email will be sent to <strong id="verified-mode-count">all</strong> verified users only
+            </div>
+
+            <!-- Search (individual mode) -->
+            <div id="search-section">
+              <div class="search-wrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input class="search-inp" id="user-search" placeholder="Search by name or email…" oninput="filterUserList()">
+              </div>
+
+              <div class="select-all-bar">
+                <button class="select-all-btn" onclick="selectAllVisible()">Select all visible</button>
+                <span class="selected-count" id="selected-count">0 selected</span>
+              </div>
+
+              <div class="user-list" id="user-list">
+                <div class="empty"><div class="empty-icon">⏳</div>Loading users…</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Compose -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Compose Message</div>
+              <div class="card-sub">Write your email and optionally add a button link</div>
+            </div>
+          </div>
+          <div class="card-body">
+
+            <!-- To: preview -->
+            <div class="form-group">
+              <label class="form-label">To</label>
+              <div class="recipient-preview" id="recipient-preview">
+                <span class="no-recipients">No recipients selected yet</span>
+              </div>
+            </div>
+
+            <!-- Subject -->
+            <div class="form-group">
+              <label class="form-label">Subject</label>
+              <input class="form-input" id="email-subject" placeholder="e.g. Important update from Nexora">
+            </div>
+
+            <!-- Message -->
+            <div class="form-group">
+              <label class="form-label">Message</label>
+              <textarea class="form-input" id="email-message" placeholder="Write your message here…&#10;&#10;You can use multiple paragraphs — each blank line becomes a new paragraph in the email."></textarea>
+            </div>
+
+            <!-- CTA (optional) -->
+            <div class="form-group">
+              <label class="form-label">Call-to-Action Button <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
+              <div class="cta-row">
+                <input class="form-input" id="cta-text" placeholder="Button text e.g. Start Earning">
+                <input class="form-input" id="cta-link" placeholder="https://joinnexora.online/…">
+              </div>
+            </div>
+
+            <!-- Send button -->
+            <button class="send-btn" id="send-btn" onclick="sendEmails()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send Email
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Send Log -->
+        <div class="log-wrap" id="log-wrap" style="display:none;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text2);">
+            📬 Send Results
+          </div>
+          <div id="send-log"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL      = 'https://awrqlckuunqmrxjpvfct.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cnFsY2t1dW5xbXJ4anB2ZmN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MzczMzMsImV4cCI6MjA5MzMxMzMzM30.ZOhEOOUyfMLQSRWWHb38Tv9JufvkS6TNjamlLPq5fl8';
+const EDGE_URL          = `${SUPABASE_URL}/functions/v1/send-admin-email`;
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let allUsers      = [];
+let selectedIds   = new Set();
+let currentMode   = 'individual'; // individual | all | verified
+
+const GRADIENTS = [
+  'linear-gradient(135deg,#7c3aed,#3a86ff)',
+  'linear-gradient(135deg,#22c55e,#16a34a)',
+  'linear-gradient(135deg,#f59e0b,#d97706)',
+  'linear-gradient(135deg,#3a86ff,#2563eb)',
+  'linear-gradient(135deg,#ec4899,#be185d)',
+];
+
+/* ── TOAST ── */
+function toast(type, title, body, dur=5000){
+  const s = document.getElementById('toastStack');
+  const icons = {
+    g:'<polyline points="20 6 9 17 4 12"/>',
+    r:'<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+    a:'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>',
+  };
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `<div class="t-icon ${type}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">${icons[type]||icons.g}</svg></div><div><div class="t-title">${title}</div><div class="t-body">${body}</div></div>`;
+  s.appendChild(t);
+  setTimeout(()=>{ t.classList.add('hide'); setTimeout(()=>t.remove(),250); }, dur);
+}
+
+/* ── INIT ── */
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ window.location.href='auth.html'; return; }
+
+  const { data:p } = await sb.from('profiles').select('is_admin').eq('id',session.user.id).maybeSingle();
+  if(!p?.is_admin){ window.location.href='admin.html'; return; }
+
+  await loadUsers();
+}
+
+async function loadUsers(){
+  const { data, error } = await sb.from('profiles')
+    .select('id,first_name,last_name,email,is_verified,is_premium,wallet_balance')
+    .order('created_at',{ ascending:false });
+
+  if(error){ toast('r','Error',error.message); return; }
+
+  allUsers = (data||[]).filter(u => u.email);
+  document.getElementById('recipient-sub').textContent = `${allUsers.length} users loaded`;
+  document.getElementById('all-mode-count').textContent = allUsers.length;
+  document.getElementById('verified-mode-count').textContent = allUsers.filter(u=>u.is_verified).length;
+  renderUserList(allUsers);
+}
+
+/* ── MODE ── */
+function setMode(mode){
+  currentMode = mode;
+  selectedIds.clear();
+
+  document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+mode).classList.add('active');
+
+  document.getElementById('all-mode-notice').style.display      = mode==='all'      ? 'block' : 'none';
+  document.getElementById('verified-mode-notice').style.display = mode==='verified' ? 'block' : 'none';
+  document.getElementById('search-section').style.display       = mode==='individual' ? 'block' : 'none';
+
+  updateRecipientPreview();
+  updateSelectedCount();
+}
+
+/* ── RENDER USER LIST ── */
+function renderUserList(users){
+  const list = document.getElementById('user-list');
+  if(!users.length){
+    list.innerHTML = '<div class="empty"><div class="empty-icon">👥</div>No users found</div>';
+    return;
+  }
+  list.innerHTML = users.map((u,i)=>{
+    const name  = [u.first_name,u.last_name].filter(Boolean).join(' ') || u.email.split('@')[0];
+    const badge = u.is_premium
+      ? '<span class="user-badge premium">💎</span>'
+      : u.is_verified
+        ? '<span class="user-badge verified">✓</span>'
+        : '<span class="user-badge unverified">—</span>';
+    const checked = selectedIds.has(u.id);
+    return `
+      <div class="user-row ${checked?'selected':''}" id="row-${u.id}" onclick="toggleUser('${u.id}')">
+        <div class="user-av" style="background:${GRADIENTS[i%GRADIENTS.length]}">${name[0].toUpperCase()}</div>
+        <div class="user-info">
+          <div class="user-name">${name}</div>
+          <div class="user-email">${u.email}</div>
+        </div>
+        ${badge}
+        <div class="user-check">
+          ${checked ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function filterUserList(){
+  const q = document.getElementById('user-search').value.toLowerCase();
+  const filtered = q
+    ? allUsers.filter(u=>{
+        const name = [u.first_name,u.last_name,u.email].filter(Boolean).join(' ').toLowerCase();
+        return name.includes(q);
+      })
+    : allUsers;
+  renderUserList(filtered);
+}
+
+function toggleUser(id){
+  if(selectedIds.has(id)){
+    selectedIds.delete(id);
+  } else {
+    selectedIds.add(id);
+  }
+  // Update just this row
+  const row = document.getElementById('row-'+id);
+  if(row){
+    const checked = selectedIds.has(id);
+    row.classList.toggle('selected', checked);
+    row.querySelector('.user-check').innerHTML = checked
+      ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
+      : '';
+  }
+  updateSelectedCount();
+  updateRecipientPreview();
+}
+
+function selectAllVisible(){
+  const q = document.getElementById('user-search').value.toLowerCase();
+  const visible = q
+    ? allUsers.filter(u=>[u.first_name,u.last_name,u.email].filter(Boolean).join(' ').toLowerCase().includes(q))
+    : allUsers;
+
+  const allSelected = visible.every(u=>selectedIds.has(u.id));
+  visible.forEach(u => allSelected ? selectedIds.delete(u.id) : selectedIds.add(u.id));
+  renderUserList(visible.length < allUsers.length ? visible : allUsers);
+  updateSelectedCount();
+  updateRecipientPreview();
+}
+
+function updateSelectedCount(){
+  document.getElementById('selected-count').textContent = `${selectedIds.size} selected`;
+}
+
+/* ── RECIPIENT PREVIEW ── */
+function updateRecipientPreview(){
+  const preview = document.getElementById('recipient-preview');
+
+  if(currentMode === 'all'){
+    preview.innerHTML = `<span class="recipient-chip all">📢 All ${allUsers.length} users</span>`;
+    return;
+  }
+  if(currentMode === 'verified'){
+    const count = allUsers.filter(u=>u.is_verified).length;
+    preview.innerHTML = `<span class="recipient-chip all">✓ ${count} verified users</span>`;
+    return;
+  }
+
+  if(!selectedIds.size){
+    preview.innerHTML = '<span class="no-recipients">No recipients selected yet</span>';
+    return;
+  }
+
+  const chips = [...selectedIds].map(id=>{
+    const u = allUsers.find(x=>x.id===id);
+    if(!u) return '';
+    const name = [u.first_name,u.last_name].filter(Boolean).join(' ') || u.email.split('@')[0];
+    return `<span class="recipient-chip">${name} <button onclick="removeRecipient('${id}')">×</button></span>`;
+  }).join('');
+
+  preview.innerHTML = chips;
+}
+
+function removeRecipient(id){
+  selectedIds.delete(id);
+  const row = document.getElementById('row-'+id);
+  if(row){
+    row.classList.remove('selected');
+    row.querySelector('.user-check').innerHTML = '';
+  }
+  updateSelectedCount();
+  updateRecipientPreview();
+}
+
+/* ── SEND ── */
+async function sendEmails(){
+  const subject = document.getElementById('email-subject').value.trim();
+  const message = document.getElementById('email-message').value.trim();
+  const ctaText = document.getElementById('cta-text').value.trim();
+  const ctaLink = document.getElementById('cta-link').value.trim();
+
+  if(!subject){ toast('a','Missing subject','Please enter an email subject.'); return; }
+  if(!message){ toast('a','Missing message','Please write your message.'); return; }
+
+  // Build recipients list
+  let recipients = [];
+  if(currentMode === 'all'){
+    recipients = allUsers.map(u=>({
+      email: u.email,
+      name:  [u.first_name,u.last_name].filter(Boolean).join(' ') || u.email.split('@')[0],
+    }));
+  } else if(currentMode === 'verified'){
+    recipients = allUsers.filter(u=>u.is_verified).map(u=>({
+      email: u.email,
+      name:  [u.first_name,u.last_name].filter(Boolean).join(' ') || u.email.split('@')[0],
+    }));
+  } else {
+    if(!selectedIds.size){ toast('a','No recipients','Please select at least one user.'); return; }
+    recipients = [...selectedIds].map(id=>{
+      const u = allUsers.find(x=>x.id===id);
+      return {
+        email: u.email,
+        name:  [u.first_name,u.last_name].filter(Boolean).join(' ') || u.email.split('@')[0],
+      };
+    });
+  }
+
+  if(!recipients.length){ toast('a','No recipients','No users to send to.'); return; }
+
+  // Confirm for bulk sends
+  if(recipients.length > 5){
+    if(!confirm(`You are about to send an email to ${recipients.length} users. Continue?`)) return;
+  }
+
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Sending…';
+
+  const { data:{ session } } = await sb.auth.getSession();
+
+if(!session){
+  toast('r','Not logged in','Please log in again.');
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Email';
+  return;
+}
+
+try {
+  const res = await fetch(EDGE_URL, {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({
+      recipients,
+      subject,
+      message,
+      ctaText: ctaText || null,
+      ctaLink: ctaLink || null,
+    }),
+  });
+
+    const result = await res.json();
+
+    if(!res.ok) throw new Error(result.error || 'Send failed');
+
+    // Show results
+    showSendLog(result);
+
+    toast('g',
+      `✅ Sent to ${result.sent} users`,
+      result.failed > 0 ? `${result.failed} failed — check log below.` : 'All emails delivered successfully.',
+      8000
+    );
+
+    // Reset form
+    document.getElementById('email-subject').value = '';
+    document.getElementById('email-message').value = '';
+    document.getElementById('cta-text').value      = '';
+    document.getElementById('cta-link').value      = '';
+
+  } catch(e){
+    toast('r','Send Failed', e.message || 'Something went wrong.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Email';
+  }
+}
+
+function showSendLog(result){
+  const wrap = document.getElementById('log-wrap');
+  const log  = document.getElementById('send-log');
+  wrap.style.display = 'block';
+
+  const rows = [
+    ...(result.results||[]).map(r=>`
+      <div class="log-item">
+        <div class="log-icon ok">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <div class="log-name">${r.email}</div>
+        </div>
+        <div class="log-status ok">✓ Sent</div>
+      </div>`),
+    ...(result.errors||[]).map(r=>`
+      <div class="log-item">
+        <div class="log-icon err">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        </div>
+        <div>
+          <div class="log-name">${r.email}</div>
+          <div class="log-email">${r.error}</div>
+        </div>
+        <div class="log-status err">✗ Failed</div>
+      </div>`),
+  ];
+
+  log.innerHTML = rows.join('');
+  wrap.scrollIntoView({ behavior:'smooth' });
+}
+
+async function logout(){
+  await sb.auth.signOut();
+  window.location.href = 'auth.html';
+}
+
+init();
+</script>
+</body>
+</html>
